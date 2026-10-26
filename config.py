@@ -2,12 +2,9 @@ import sqlite3
 import pandas as pd
 
 LLM_BASE_URL = "http://localhost:7070/getQuery/"
-TENANT_ID=100
+TENANT_ID=202
 METADATA_DB = "metabase_metadata.db"
-
-def get_db_connection():
-    """Returns an active connection to your analytical database."""
-    return sqlite3.connect("your_existing_database.db", check_same_thread=False)
+SQL_APRIL_COURSES = "SELECT c.name AS course_name, e.state, COUNT(e.global_event_id) AS number_of_courses, SUM(e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.course_event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.name, e.state"
 
 def get_metadata_connection():
     """Returns connection to the metadata store."""
@@ -40,8 +37,7 @@ def init_metadata_store():
     cursor.execute("SELECT COUNT(*) FROM dashboards WHERE is_system = 1;")
     if cursor.fetchone()[0] == 0:
         default_cards = [
-            ("system", "Overview of total active users", "SELECT COUNT(*) as total_users FROM users;", 1, 1),
-            ("system", "Recent orders summary", "SELECT order_date, SUM(amount) as daily_revenue FROM orders GROUP BY order_date ORDER BY order_date DESC LIMIT 5;", 1, 1)
+            ("system", "Overview of total courses in April 2026", SQL_APRIL_COURSES, 1, 1)
         ]
         cursor.executemany("INSERT INTO dashboards (username, question, sql_query, is_system, is_public) VALUES (?, ?, ?, ?, ?)", default_cards)
         conn.commit()

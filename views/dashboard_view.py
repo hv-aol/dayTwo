@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
-from config import get_db_connection, get_all_dashboards, delete_dashboard_card
+from config import get_all_dashboards, delete_dashboard_card
+from db_postgres_executor import execute_query_in_pg
+from views.chat_view import render_flexible_chart
 
 def render_dashboard_view(username: str):
     """Renders System Defaults, Team Shared cards, and Personal cards using tabs."""
@@ -24,7 +26,7 @@ def render_dashboard_view(username: str):
             st.write("No system defaults available.")
         else:
             for _, card in system_cards.iterrows():
-                render_card(card, is_deletable=False, username=username)
+                render_card(card, is_deletable=False, username=username, prefix=f"sys_{card['id']}")
 
     with tab2:
         st.markdown("### Public Dashboards Shared by Team")
@@ -33,7 +35,7 @@ def render_dashboard_view(username: str):
         else:
             for _, card in team_cards.iterrows():
                 st.caption(f"Shared by: `{card['username']}`")
-                render_card(card, is_deletable=False, username=username)
+                render_card(card, is_deletable=False, username=username, prefix=f"team_{card['id']}")
 
     with tab3:
         st.markdown(f"### My Personal Dashboards ({username})")
@@ -43,22 +45,38 @@ def render_dashboard_view(username: str):
             for _, card in personal_cards.iterrows():
                 visibility = "🌐 Public (Team Shared)" if card["is_public"] == 1 else "🔒 Private"
                 st.caption(f"Status: {visibility}")
-                render_card(card, is_deletable=True, username=username)
+                render_card(card, is_deletable=True, username=username, prefix=f"pers_{card['id']}")
 
-def render_card(card, is_deletable: bool, username: str):
-    """Helper to render individual card charts and data grids."""
+def render_card(card, is_deletable: bool, username: str, prefix: str):
+    """Renders individual saved cards with execute_with_retries and flexible chart support."""
     with st.container():
-        st.markdown(f"Question:")
+        st.markdown(f"Question: {card["question"]}")
         st.code(card["sql_query"], language="sql")
-        
+        # define a cache of cards. If present in cachem use the cached df otherwise load it.
+        card_id = card['id']
+        cache_key = f"df_cache_{card_id}"
+
+        if "card_dfs" not in st.session_state:
+            st.session_state["card_dfs"] = {}
+
         try:
-            conn = get_db_connection()
-            df = pd.read_sql(card["sql_query"], conn)
-            conn.close()
-            
+            # check if card is already loaded
+            if cache_key not in st.session_state["card_dfs"]:
+                rs = execute_query_in_pg(card["sql_query"])
+                df0 = pd.DataFrame(rs)
+                st.session_state["card_dfs"][cache_key] = df0
+
+            df = st.session_state["card_dfs"][cache_key]
             st.dataframe(df, use_container_width=True)
-            if len(df.columns) >= 2:
-                st.bar_chart(df.set_index(df.columns[0]))
+
+            # Render flexible chart component imported from chat_view
+            render_flexible_chart(df, unique_key_prefix=prefix)
+
+            # Optional: Add a refresh button if user explicitly wants to re-run the query against DB
+            if st.button("🔄 Refresh Data", key=f"refresh_{card_id}"):
+                if cache_key in st.session_state["card_dfs"]:
+                    del st.session_state["card_dfs"][cache_key]
+                st.rerun()
         except Exception as e:
             st.error(f"Error executing card query: {e}")
             

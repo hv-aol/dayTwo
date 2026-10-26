@@ -1,8 +1,10 @@
 import streamlit as st
+import logging
 from auth import render_login
 from config import init_metadata_store, get_database_schema
 from views.chat_view import render_chat_view
 from views.dashboard_view import render_dashboard_view
+from logger.app_logger import setup_logging
 
 # Page Configuration
 st.set_page_config(
@@ -13,6 +15,9 @@ st.set_page_config(
 
 # Initialize Metadata Store
 init_metadata_store()
+setup_logging()
+
+logger = logging.getLogger(__name__)
 
 # State Initialization
 if "authenticated" not in st.session_state:
@@ -32,6 +37,13 @@ else:
     app_mode = st.sidebar.radio("Navigation", ["💬 NLP Query & Chat", "📊 Dashboards"])
     
     st.sidebar.markdown("---")
+    # Context-aware sidebar action: Clear chat history button when in chat mode
+    if app_mode == "💬 NLP Query & Chat":
+        if st.sidebar.button("🗑️ Clear Chat History", use_container_width=True):
+            st.session_state.messages = []
+            st.success("Chat history cleared!")
+            st.rerun()
+        st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Log Out", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.username = None
@@ -46,6 +58,6 @@ else:
 
     # Route Views
     if app_mode == "💬 NLP Query & Chat":
-        render_chat_view(openrouter_api_key, schema_info, st.session_state.username)
+        render_chat_view(st.session_state.username)
     elif app_mode == "📊 Dashboards":
         render_dashboard_view(st.session_state.username)

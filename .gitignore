@@ -1,4 +1,6 @@
 your_existing_database.db
 metabase_metadata.db
 __pycache__/*
+views/__pycache__/*
+logger/__pycache__/*
 
