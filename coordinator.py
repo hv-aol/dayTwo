@@ -2,12 +2,13 @@
 # validates/executes the query and handles retries
 import logging
 from db_postgres_executor import execute_query_in_pg
+from ai_service import query_llm_with_history
 
 MAX_RETRY_COUNT = 2
 # init logger.
 logger = logging.getLogger(__name__)
 
-def generate_query_and_execute(prompt, tenant_id):
+def generate_query_and_execute(prompt: str, tenant_id: int):
 	query = generate_query(tenant_id, prompt)
 	# query = generate_query(prompt) # HACKY WAY TO FAIL FAST. DELETE IT.
 	return execute_with_retries(query, prompt, tenant_id)
@@ -36,4 +37,4 @@ def execute_with_retries(query, original_prompt, tenant_id):
 			c1 = "Constraint: Only use columns explicitly listed in the Database Schema above. Do not infer or extrapolate column names."
 
 			new_prompt = p1 + f1 + e1 + c1
-			query_to_use = generate_query(tenant_id, new_prompt)
+			query_to_use = query_llm_with_history(tenant_id = tenant_id, query = new_prompt)

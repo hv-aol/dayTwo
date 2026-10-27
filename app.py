@@ -51,7 +51,7 @@ else:
         st.rerun()
 
     # Main Entry Header
-    st.title("📊 Mini-Metabase (Qwen + OpenRouter)")
+    st.title("📊 Mini-Metabase Roadster")
 
     # Retrieve schema info
     schema_info = get_database_schema()

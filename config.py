@@ -4,7 +4,7 @@ import pandas as pd
 LLM_BASE_URL = "http://localhost:7070/getQuery/"
 TENANT_ID=202
 METADATA_DB = "metabase_metadata.db"
-SQL_APRIL_COURSES = "SELECT c.name AS course_name, e.state, COUNT(e.global_event_id) AS number_of_courses, SUM(e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.course_event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.name, e.state"
+SQL_APRIL_COURSES = "SELECT c.name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.name, e.apex_name "
 
 def get_metadata_connection():
     """Returns connection to the metadata store."""
@@ -37,7 +37,7 @@ def init_metadata_store():
     cursor.execute("SELECT COUNT(*) FROM dashboards WHERE is_system = 1;")
     if cursor.fetchone()[0] == 0:
         default_cards = [
-            ("system", "Overview of total courses in April 2026", SQL_APRIL_COURSES, 1, 1)
+            ("system", "Courses overview in April 2026", SQL_APRIL_COURSES, 1, 1)
         ]
         cursor.executemany("INSERT INTO dashboards (username, question, sql_query, is_system, is_public) VALUES (?, ?, ?, ?, ?)", default_cards)
         conn.commit()

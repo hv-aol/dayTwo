@@ -45,7 +45,7 @@ def execute_query_in_pg(query):
 				rs = cur.fetchall()
 				return rs
 	except BaseException as e:
-		logger.error(f"Got error while executing query {e}")
+		logger.error(f"Got error while executing query: {e}")
 		raise e
 	finally:
 		conn.close()

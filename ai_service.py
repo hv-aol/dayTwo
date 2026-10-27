@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def query_qwen_with_history(query, tenant_id) -> str:
+def query_llm_with_history(query: str, tenant_id: int) -> str:
     """Sends conversation history and database schema to LLM service wrapper endpoint. 
     The service has the schema context"""
 

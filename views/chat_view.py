@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from ai_service import query_qwen_with_history
+from ai_service import query_llm_with_history
 from config import save_dashboard_card
 from config import TENANT_ID
 from db_utils import validate_query_gen_by_llm
@@ -83,11 +83,11 @@ def render_chat_view(username: str):
             st.markdown(user_prompt)
         
         with st.chat_message("assistant"):
-            with st.spinner("Qwen is writing and optimizing your query..."):
+            with st.spinner("LLM is writing and optimizing your query..."):
                 logger.info(f"messages: {st.session_state.messages}")
                 prompt_to_use = st.session_state.messages[-1]['content'] # using last prompt
                 logger.info(f"Using query: {prompt_to_use}")
-                assistant_reply = query_qwen_with_history(
+                assistant_reply = query_llm_with_history(
                     query=prompt_to_use,
                     tenant_id=TENANT_ID
                 )
@@ -95,7 +95,7 @@ def render_chat_view(username: str):
             st.markdown(assistant_reply)
             df_result = None
             sql_query = None
-
+            query_used = None
             # obtained the sql from LLM.
             # validate it.
             try:
@@ -103,12 +103,12 @@ def render_chat_view(username: str):
                 sql_query = assistant_reply
                 query_used, rs = execute_with_retries(sql_query, prompt_to_use, TENANT_ID)
                 df_result = pd.DataFrame(rs)
-                st.code(sql_query, language="sql")
+                st.code(query_used, language="sql")
                 st.dataframe(df_result, use_container_width=True)
                 
                 msg_idx = len(st.session_state.messages)
                 render_flexible_chart(df_result, unique_key_prefix=f"live_{msg_idx}")
-                
+
                 # Pinning Controls with Team Sharing Toggle
                 st.markdown("---")
                 col1, col2 = st.columns([2, 1])
