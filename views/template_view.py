@@ -3,7 +3,7 @@ import streamlit as st
 from db_postgres_executor import execute_query_in_pg
 from config import TENANT_ID
 import datetime
-from views.chat_view import render_flexible_chart
+from views.chat_view import render_flexible_chart, show_sql
 
 def render_template_view():
     """Renders a library of independent pre-built report templates."""
@@ -182,7 +182,7 @@ def run_template_execution(sql_query: str, template_title: str, chart_key: str):
         st.info("No data returned for the selected parameters.")
         return
 
-    st.code(st.session_state[query_key], language="sql")
+    show_sql(st.session_state[query_key])
     st.dataframe(st.session_state[data_key], use_container_width=True)
 
     # Render flexible chart component imported from chat_view

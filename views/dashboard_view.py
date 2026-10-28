@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from config import get_all_dashboards, delete_dashboard_card
 from db_postgres_executor import execute_query_in_pg
-from views.chat_view import render_flexible_chart
+from views.chat_view import render_flexible_chart, show_sql
 
 def render_dashboard_view(username: str):
     """Renders System Defaults, Team Shared cards, and Personal cards using tabs."""
@@ -51,7 +51,7 @@ def render_card(card, is_deletable: bool, username: str, prefix: str):
     """Renders individual saved cards with execute_with_retries and flexible chart support."""
     with st.container():
         st.markdown(f"Question: {card["question"]}")
-        st.code(card["sql_query"], language="sql")
+        show_sql(card["sql_query"])
         # define a cache of cards. If present in cachem use the cached df otherwise load it.
         card_id = card['id']
         cache_key = f"df_cache_{card_id}"

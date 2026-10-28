@@ -39,6 +39,11 @@ def render_flexible_chart(df, unique_key_prefix):
             except Exception as e:
                 st.warning(f"Could not render chart with selected fields: {e}")
 
+def show_sql(sql):
+    if sql is not None:
+        with st.expander("▶ Click to view source code", expanded=False):
+            st.code(sql, language="sql")
+
 def render_chat_view(username: str):
     """Renders NLP chat with public/private dashboard pinning options."""
     st.markdown(f"Welcome back, **{username}**! Ask natural language questions to analyze your data and pin insights.")    
@@ -52,8 +57,7 @@ def render_chat_view(username: str):
             if "df_result" in message and message["df_result"] is not None:
                 df = message["df_result"]
                 sql = message.get("sql")
-                if sql:
-                    st.code(sql, language="sql")
+                show_sql(sql)
                 st.dataframe(df, use_container_width=True)
                 
                 # Flexible chart picker for history
@@ -103,7 +107,7 @@ def render_chat_view(username: str):
                 sql_query = assistant_reply
                 query_used, rs = execute_with_retries(sql_query, prompt_to_use, TENANT_ID)
                 df_result = pd.DataFrame(rs)
-                st.code(query_used, language="sql")
+                show_sql(sql_query)
                 st.dataframe(df_result, use_container_width=True)
                 
                 msg_idx = len(st.session_state.messages)
