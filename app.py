@@ -4,6 +4,7 @@ from auth import render_login
 from config import init_metadata_store, get_database_schema
 from views.chat_view import render_chat_view
 from views.dashboard_view import render_dashboard_view
+from views.template_view import render_template_view
 from logger.app_logger import setup_logging
 
 # Page Configuration
@@ -34,7 +35,7 @@ else:
     # Sidebar Navigation & Settings
     st.sidebar.title(f"👤 Logged in as: `{st.session_state.username}`")
     # openrouter_api_key = st.sidebar.text_input("OpenRouter API Key", type="password", placeholder="sk-or-...")
-    app_mode = st.sidebar.radio("Navigation", ["💬 NLP Query & Chat", "📊 Dashboards"])
+    app_mode = st.sidebar.radio("Navigation", ["💬 NLP Query & Chat", "📊 Dashboards", "📋 Standard Reports"])
     
     st.sidebar.markdown("---")
     # Context-aware sidebar action: Clear chat history button when in chat mode
@@ -61,3 +62,5 @@ else:
         render_chat_view(st.session_state.username)
     elif app_mode == "📊 Dashboards":
         render_dashboard_view(st.session_state.username)
+    else:
+        render_template_view()
