@@ -1,11 +1,5 @@
 import streamlit as st
-
-USERS_DB = {
-    "alice": "password123",
-    "bob": "securepass",
-    "admin": "admin",
-    "test": "test1"
-}
+from bcrypt_auth import verify_user
 
 def render_login():
     """Renders user login form."""
@@ -20,7 +14,7 @@ def render_login():
             submit_button = st.form_submit_button("Log In", use_container_width=True)
             
             if submit_button:
-                if username_input in USERS_DB and USERS_DB[username_input] == password_input:
+                if verify_user(username_input, password_input):
                     st.session_state.authenticated = True
                     st.session_state.username = username_input
                     st.success("Login successful! Redirecting...")
