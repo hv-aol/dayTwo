@@ -3,5 +3,4 @@ metabase_metadata.db
 __pycache__/*
 views/__pycache__/*
 logger/__pycache__/*
-create_user.py
 .secrets/*
