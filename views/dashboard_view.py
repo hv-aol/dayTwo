@@ -50,7 +50,7 @@ def render_dashboard_view(username: str):
 def render_card(card, is_deletable: bool, username: str, prefix: str):
     """Renders individual saved cards with execute_with_retries and flexible chart support."""
     with st.container():
-        st.markdown(f"Question: {card["question"]}")
+        st.markdown(f"Question: {card['question']}")
         show_sql(card["sql_query"])
         # define a cache of cards. If present in cachem use the cached df otherwise load it.
         card_id = card['id']
