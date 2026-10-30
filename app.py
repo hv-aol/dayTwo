@@ -1,7 +1,7 @@
 import streamlit as st
 import logging
 from dotenv import load_dotenv
-load_dotenv(".secrets/.env") # this sets db config. Lets work on decrypting the password.
+load_dotenv(".env") # this sets db config. Lets work on decrypting the password.
 
 from auth import render_login
 from config import init_metadata_store, get_database_schema
