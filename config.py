@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 
 LLM_BASE_URL = "http://localhost:7070/getQuery/"
-TENANT_ID=202
+TENANT_ID=102
 METADATA_DB = "metabase_metadata.db"
 SQL_APRIL_COURSES = "SELECT c.name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.name, e.apex_name "
 
