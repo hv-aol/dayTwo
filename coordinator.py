@@ -4,7 +4,7 @@ import logging
 from db_postgres_executor import execute_query_in_pg
 from ai_service import query_llm_with_history
 
-MAX_RETRY_COUNT = 2
+MAX_RETRY_COUNT = 5
 # init logger.
 logger = logging.getLogger(__name__)
 
