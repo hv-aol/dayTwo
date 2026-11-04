@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv(".env") # this sets db config. Lets work on decrypting the password.
 
 from auth import render_login
-from config import init_metadata_store, get_database_schema
+from config import init_metadata_store
 from views.chat_view import render_chat_view
 from views.dashboard_view import render_dashboard_view
 from views.template_view import render_template_view
@@ -57,9 +57,6 @@ else:
 
     # Main Entry Header
     st.title("📊 Mini-Metabase Roadster")
-
-    # Retrieve schema info
-    schema_info = get_database_schema()
 
     # Route Views
     if app_mode == "💬 NLP Query & Chat":

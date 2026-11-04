@@ -1,53 +1,58 @@
 import os
 import json
 import bcrypt
+from config import METADATA_DB, get_metadata_connection
+import pandas as pd
 
-CREDENTIALS_FILE = "./.secrets/.users.json"
-
+class User:
+    def __init__(self, user_name, enc_password, dept_ids):
+        self.id = None
+        self.user_name = user_name
+        self.enc_password = enc_password
+        self.dept_ids = dept_ids
+        self.active = 1
 
 def load_users() -> dict:
-    if not os.path.exists(CREDENTIALS_FILE):
-        return {}
-    try:
-        with open(CREDENTIALS_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    """ connect to the sqlite db, fetch all the active users"""
+    conn = get_metadata_connection()
+    df = pd.read_sql("SELECT * FROM users where active = 1", conn)
+    conn.close()
+    user_dict = {
+        row.user_name: User(
+            user_name=row.user_name,
+            enc_password=row.enc_password,
+            dept_ids=row.dept_ids)
+        for row in df.itertuples(index=False)
+    }
+    return user_dict
 
-
-def secure_opener(path, flags):
-    """Guarantees the file is created with 600 permissions (Owner Read/Write Only)"""
-    return os.open(path, flags, 0o600)
-
-
-def save_users(data: dict):
-    # overrides the already written data.
-    dir_name = os.path.dirname(CREDENTIALS_FILE)
-    if dir_name:
-        os.makedirs(dir_name, exist_ok=True)
-        os.chmod(dir_name, 0o700)
-
-    with open(CREDENTIALS_FILE, "w", opener=secure_opener) as f:
-        json.dump(data, f, indent=4)
-
-
-def register_user(username: str, plain_password: str):
+def register_user(user_name: str, plain_password: str, dept_ids: str):
     users = load_users()
-    if username in users:
-        print(f"User {username} is already registered!")
+    if user_name in users:
+        print(f"User {user_name} already exist!")
         return False
-    # Generate unique salt and hash the password (rounds=12 is the production standard)
+    # encrypt the password and generate its hash
     hashed = bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt(rounds=12))
-
-    users[username] = hashed.decode("utf-8")
-    save_users(users)
+    user = User(user_name=user_name, enc_password=hashed.decode('utf-8'), dept_ids=dept_ids)
+    save_user(user)
     return True
 
+def save_user(user: User): 
+    conn = get_metadata_connection()
+    try:
+        cursor = conn.cursor()
+        sql = "INSERT INTO USERS (user_name, enc_password, dept_ids, active) VALUES (?, ?, ?, 1)"
+        cursor.execute(sql, (user.user_name, user.enc_password, user.dept_ids))
+
+    finally:
+        conn.commit()
+        conn.close()
 
 def verify_user(username: str, plain_password: str):
     users = load_users()
     if username not in users:
         return False
-    stored_hash = users[username].encode("utf-8")
+    print(f"user {username} exist in db, {users.get(username)}")
+    stored_hashed_password = users.get(username).enc_password.encode('utf-8')
     # check if they match
-    return bcrypt.checkpw(plain_password.encode("utf-8"), stored_hash)
+    return bcrypt.checkpw(plain_password.encode("utf-8"), stored_hashed_password)
