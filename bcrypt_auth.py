@@ -74,7 +74,7 @@ def save_user(user: User):
 def verify_user(username: str, plain_password: str):
     users = load_users()
     if username not in users:
-        return False
+        return False, None
     print(f"user {username} exist in db, dept_ids: {users.get(username).dept_ids}")
     stored_hashed_password = users.get(username).enc_password.encode('utf-8')
     # check if they match
