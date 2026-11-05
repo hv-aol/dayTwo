@@ -50,7 +50,7 @@ def render_teacher_performance_template():
 
     sql_query = f"""
 		SELECT 
-		    v_llm_teacher_performance.course_event_name,
+		    v_llm_teacher_performance.course_name,
             llm_course_id_mapping.name AS course_type,
 		    v_llm_teacher_performance.event_start_date,
 		    v_llm_teacher_performance.event_start_month,
