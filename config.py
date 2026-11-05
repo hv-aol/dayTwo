@@ -3,7 +3,7 @@ import pandas as pd
 import logging
 
 LLM_BASE_URL = "http://localhost:7070/getQuery/"
-TENANT_ID=202
+TENANT_ID=102
 METADATA_DB = "metabase_metadata.db"
 USERS_DB = "users.db"
 
