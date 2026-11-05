@@ -14,9 +14,11 @@ def render_login():
             submit_button = st.form_submit_button("Log In", use_container_width=True)
             
             if submit_button:
-                if verify_user(username_input, password_input):
+                is_valid_user, dept_ids = verify_user(username_input, password_input)
+                if is_valid_user:
                     st.session_state.authenticated = True
                     st.session_state.username = username_input
+                    st.session_state.dept_ids = dept_ids
                     st.success("Login successful! Redirecting...")
                     st.rerun()
                 else:

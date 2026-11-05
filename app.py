@@ -2,13 +2,14 @@ import streamlit as st
 import logging
 from dotenv import load_dotenv
 load_dotenv(".env") # this sets db config. Lets work on decrypting the password.
+from logger.app_logger import setup_logging
 
 from auth import render_login
 from config import init_metadata_store
+from bcrypt_auth import init_users
 from views.chat_view import render_chat_view
 from views.dashboard_view import render_dashboard_view
 from views.template_view import render_template_view
-from logger.app_logger import setup_logging
 
 
 # Page Configuration
@@ -18,9 +19,12 @@ st.set_page_config(
     layout="wide"
 )
 
+#init logging
+setup_logging()
 # Initialize Metadata Store
 init_metadata_store()
-setup_logging()
+# Initialize user store
+init_users()
 
 logger = logging.getLogger(__name__)
 

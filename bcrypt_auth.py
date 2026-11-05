@@ -1,7 +1,8 @@
 import os
 import json
 import bcrypt
-from config import METADATA_DB, get_metadata_connection
+import sqlite3
+from config import USERS_DB
 import pandas as pd
 
 class User:
@@ -12,9 +13,31 @@ class User:
         self.dept_ids = dept_ids
         self.active = 1
 
+def get_userdata_connection():
+    """Returns connection to the metadata store."""
+    return sqlite3.connect(USERS_DB, check_same_thread=False)
+
+def init_users():
+    conn = get_userdata_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS USERS (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT,
+                enc_password TEXT,
+                dept_ids,
+                active INTEGER DEFAULT 1
+            )
+        """)
+        print(f"Done with creating user table")
+    finally:
+        conn.commit()
+        conn.close()
+
 def load_users() -> dict:
     """ connect to the sqlite db, fetch all the active users"""
-    conn = get_metadata_connection()
+    conn = get_userdata_connection()
     df = pd.read_sql("SELECT * FROM users where active = 1", conn)
     conn.close()
     user_dict = {
@@ -38,7 +61,7 @@ def register_user(user_name: str, plain_password: str, dept_ids: str):
     return True
 
 def save_user(user: User): 
-    conn = get_metadata_connection()
+    conn = get_userdata_connection()
     try:
         cursor = conn.cursor()
         sql = "INSERT INTO USERS (user_name, enc_password, dept_ids, active) VALUES (?, ?, ?, 1)"
@@ -52,7 +75,7 @@ def verify_user(username: str, plain_password: str):
     users = load_users()
     if username not in users:
         return False
-    print(f"user {username} exist in db, {users.get(username)}")
+    print(f"user {username} exist in db, dept_ids: {users.get(username).dept_ids}")
     stored_hashed_password = users.get(username).enc_password.encode('utf-8')
     # check if they match
-    return bcrypt.checkpw(plain_password.encode("utf-8"), stored_hashed_password)
+    return (bcrypt.checkpw(plain_password.encode("utf-8"), stored_hashed_password), users.get(username).dept_ids)

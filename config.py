@@ -5,7 +5,9 @@ import logging
 LLM_BASE_URL = "http://localhost:7070/getQuery/"
 TENANT_ID=202
 METADATA_DB = "metabase_metadata.db"
-SQL_APRIL_COURSES = "SELECT c.name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.name, e.apex_name "
+USERS_DB = "users.db"
+
+SQL_APRIL_COURSES = "SELECT c.course_name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.course_name, e.apex_name "
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,6 @@ def get_metadata_connection():
 def init_metadata_store():
     """Initializes metadata tables, adds public support columns, and seeds system defaults."""
     init_dashboards()
-    init_users()
 
 def init_dashboards():
     conn = get_metadata_connection()
@@ -51,25 +52,6 @@ def init_dashboards():
         conn.commit()
         conn.close()
 
-
-def init_users():
-    conn = get_metadata_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS USERS (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_name TEXT,
-                enc_password TEXT,
-                dept_ids,
-                active INTEGER DEFAULT 1
-            )
-        """)
-        logger.info("Done with creating user table")
-    finally:
-        conn.commit()
-        conn.close()
-
 def get_all_dashboards():
     """Fetches all dashboard cards from metadata store."""
     conn = get_metadata_connection()
@@ -95,8 +77,3 @@ def delete_dashboard_card(card_id: int, username: str):
     cursor.execute("DELETE FROM dashboards WHERE id = ? AND username = ? AND is_system = 0", (card_id, username))
     conn.commit()
     conn.close()
-
-## User management also in sqlite3.
-## Table: Users(Name, email, enc_password, deskIds)
-## API for register user, update user password, update deskIds, remove user)
-## auth.py should be able to read from the db and verify user.
