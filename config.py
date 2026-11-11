@@ -2,12 +2,18 @@ import sqlite3
 import pandas as pd
 import logging
 
-LLM_BASE_URL = "http://localhost:7070/getQuery/"
-TENANT_ID=102
+# THe below two properties are for brainWrapper endpoint.
+LOCAL_LLM_BASE_URL = "http://localhost:7070/getQuery/"
+PROD_LLM_BASE_URL = "http://192.168.0.4:7070/getQuery/" # TODO Move it to conf
+
+# TENANT_ID Mapping defines the LLM endpoint to connect.
+# 201: Local LLM (running on local host)
+# 202: Open router endpoint
+TENANT_ID=201
 METADATA_DB = "metabase_metadata.db"
 USERS_DB = "users.db"
 
-SQL_APRIL_COURSES = "SELECT c.course_name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.course_name, e.apex_name "
+SQL_APRIL_COURSES = "SELECT c.course_name AS course_name, e.apex_name, COUNT(e.global_event_id) AS number_of_courses, SUM (e.total_registered_participants) AS total_participants FROM v_llm_event_summary e JOIN llm_course_id_mapping c ON e.course_type_id = c.course_type_id WHERE e.course_type_id IN ('911', '912', '913', '914') AND e.event_start_date BETWEEN '2026-04-01' AND '2026-04-30' GROUP BY c.course_name, e.apex_name "
 
 logger = logging.getLogger(__name__)
 
