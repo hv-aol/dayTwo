@@ -1,7 +1,7 @@
 import requests
 import re
 
-from config import LLM_BASE_URL
+from config import LOCAL_LLM_BASE_URL, PROD_LLM_BASE_URL
 
 import logging
 
@@ -14,7 +14,7 @@ def query_llm_with_history(query: str, tenant_id: int) -> str:
     headers = {"Content-Type": "application/json"}
     payload = {"tenantId": tenant_id, "query": query}
 
-    response = requests.post(LLM_BASE_URL, json=payload, headers=headers)
+    response = requests.post(PROD_LLM_BASE_URL, json=payload, headers=headers)
     # print(f"Got response code: {response.status_code} and response = {response.json()}")
     llm_sql = response.json().get("sql")
     logger.debug(f"Extracted value = {llm_sql}")
