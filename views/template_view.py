@@ -50,23 +50,25 @@ def render_teacher_performance_template():
 
     sql_query = f"""
 		SELECT 
-		    v_llm_teacher_performance.course_name,
-            llm_course_id_mapping.name AS course_type,
-		    v_llm_teacher_performance.event_start_date,
-		    v_llm_teacher_performance.event_start_month,
-		    v_llm_teacher_performance.event_state,
-		    v_llm_teacher_performance.event_city,
-		    v_llm_teacher_performance.event_district,
-		    v_llm_teacher_performance.participants_attended 
+		    a.course_name,
+            a.program_id,
+            b.course_name AS course_type,
+		    a.event_start_date,
+		    a.event_start_month,
+		    a.event_state,
+		    a.event_city,
+		    a.event_district,
+		    a.participants_attended 
 		FROM 
-		    v_llm_teacher_performance
+		    v_llm_secure_teacher_performance a
 		JOIN 
-		    llm_course_id_mapping 
+		    llm_course_id_mapping b
 		ON 
-		    v_llm_teacher_performance.course_type = llm_course_id_mapping.course_type_id
+		    a.course_type = b.course_type_id
 		WHERE 
-		    v_llm_teacher_performance.teacher_code = '{teacher_code}' 
-		    AND v_llm_teacher_performance.event_start_month BETWEEN '{st_date}' AND '{ed_date}'"""
+		    a.teacher_code = '{teacher_code}' 
+		    AND a.event_start_month BETWEEN '{st_date}' AND '{ed_date}'
+            AND a.event_status != 'Cancelled'"""
 
     
     run_template_execution(sql_query, "Teacher Performance Summary", "perf_chart")
@@ -122,30 +124,21 @@ def validate_dtls_inputs(teacher_code):
     return True
 
 
-# --- INDEPENDENT TEMPLATE 3 ---
+# --- TEMPLATE 3 ----
+def render_all_courses_template():
+    desk_ids = st.session_state.desk_ids
+    if desk_ids is None:
+        st.error("User has no desk_ids!")
+        return
+    sql_query = f"""
+    SELECT """
+
+
+# --- INDEPENDENT TEMPLATE 4 ---
 def render_revenue_template():
     st.markdown("### 💰 Revenue & Billing Overview")
     st.caption("Summarize financial inflows broken down by category.")
-
-    category = st.selectbox(
-        "Billing Category",
-        ["All Categories", "Tuition", "Lab Fees", "Materials"],
-        key="rev_cat",
-    )
-
-    cat_filter = (
-        "" if category == "All Categories" else f"WHERE category = '{category}'"
-    )
-
-    sql_query = f"""
-        SELECT category, SUM(amount) as total_revenue, COUNT(invoice_id) as invoice_count
-        FROM billing_records
-        {cat_filter}
-        GROUP BY category
-        ORDER BY total_revenue DESC;
-    """
-
-    run_template_execution(sql_query, "Revenue & Billing Overview", "rev_chart")
+    st.subheader("Not Implememnted Yet")
 
 
 # --- HELPER: SHARED EXECUTION RENDERER ---
