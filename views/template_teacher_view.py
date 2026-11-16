@@ -79,6 +79,9 @@ def validate_perf_inputs(st_date, ed_date, teacher_code):
     if teacher_code is None:
         st.error("Please enter teacher code.")
         return False
+    return validate_dates(st_date, ed_date)
+
+def validate_dates(st_date, ed_date):
     if st_date is None or ed_date is None:
         st.error("Please select both Start Date and End Date.")
         return False
@@ -88,7 +91,6 @@ def validate_perf_inputs(st_date, ed_date, teacher_code):
         st.error("Invalid Date Range: **Start Date must be earlier than End Date**.")
         return False
     return True
-
 
 # --- INDEPENDENT TEMPLATE 2 ---
 def render_teacher_details_template():

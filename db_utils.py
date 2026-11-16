@@ -48,7 +48,7 @@ def get_staging_db_con_dict():
 
 
 def validate_query_gen_by_llm(query, target_db):
-    logger.debug(f"Target db = {target_db}, SQL to validate: {query}")
+    # logger.debug(f"Target db = {target_db}, SQL to validate: {query}")
     try:
         parsed_query = sqlglot.parse_one(query, dialect=target_db)
         logger.info(f"SQL validation passed!")

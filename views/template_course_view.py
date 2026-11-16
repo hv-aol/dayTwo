@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import logging
-from views.template_teacher_view import run_template_execution
+from views.template_teacher_view import run_template_execution, validate_dates
 from db_mysql_utils import read_courses, read_apex
 
 # This template is for Courses related view, for example,
@@ -32,7 +32,7 @@ def render_template_courses_view():
     template_func()
 
 
-# --- TEMPLATE 3 ----
+# --- TEMPLATE 1 ----
 def render_courses_template():
     desk_ids = st.session_state.dept_ids
     print(f"Desk ids = {desk_ids}")
@@ -42,6 +42,9 @@ def render_courses_template():
     courses_df = read_courses(username=st.session_state.username, desk_ids=desk_ids)
     apex_df = read_apex()
     col1, col2 = st.columns(2)
+
+    if "courses_k" not in st.session_state:
+        st.session_state["courses_k"] = {"selection": {"rows": [2]}}
 
     with col1:
         courses_df1 = st.dataframe(
@@ -54,6 +57,9 @@ def render_courses_template():
             height=280
             )
         sel_courses_ids = courses_df1.selection.rows
+
+    if "apex_k" not in st.session_state:
+        st.session_state["apex_k"] = {"selection": {"rows": [2]}}
 
     with col2:
         apex_df1 = st.dataframe(
@@ -82,7 +88,9 @@ def render_courses_template():
     picked_apex_names = apex_df.iloc[sel_apex_names]["center_name"].tolist()
     print(f"picked_apex_names: {picked_apex_names}")
     print(f"picked_course_ids: {picked_course_ids}")
-    
+    if not validate_inputs(picked_course_ids, picked_apex_names, st_date, ed_date):
+        return
+
     sql_query = f"""SELECT
     c.course_name AS course_name,
     e.program_id,
@@ -110,6 +118,12 @@ def render_courses_template():
         chart_key="courses_chart",params=(picked_apex_names, picked_course_ids_str))
 
 
-
-
-
+def validate_inputs(course_ids, apex_ids, st_date, ed_date):
+    # ensure at least one course_ids and apex_ids are picked
+    if len(course_ids) <= 0:
+        st.error("Please select at least one course")
+        return False
+    if len(apex_ids) <= 0:
+        st.error("Please select at least one Apex region")
+        return False
+    return validate_dates(st_date, ed_date)
