@@ -71,8 +71,12 @@ def render_teacher_performance_template():
 		    AND a.event_start_month BETWEEN '{st_date}' AND '{ed_date}'
             AND a.event_status != 'Cancelled'"""
 
-    
-    run_template_execution(sql_query, "Teacher Performance Summary", "perf_chart")
+    chart_key = "perf_chart"
+    df = run_template_execution(sql_query, "Teacher Performance Summary", chart_key)
+    # Show the df on a graph
+    # group the df by course type and sum the number of participants
+    df1 = df.groupby('course_type')['participants_attended'].sum().reset_index()
+    render_flexible_chart(df1, unique_key_prefix=chart_key)
 
 
 def validate_perf_inputs(st_date, ed_date, teacher_code):
@@ -117,8 +121,12 @@ def render_teacher_details_template():
         vt.teacher_apex
             from view_teacher vt where vt.teacher_code = '{teacher_code}'
     """
+    chart_key = "dtls_chart"
+    df = run_template_execution(sql_query, "Teacher Details", chart_key)
 
-    run_template_execution(sql_query, "Teacher Details", "dtls_chart")
+    # Show the df on a graph
+    render_flexible_chart(df, unique_key_prefix=chart_key)
+
 
 def validate_dtls_inputs(teacher_code):
     if teacher_code is None:
@@ -175,4 +183,4 @@ def run_template_execution(
     st.dataframe(st.session_state[data_key], use_container_width=True)
 
     # Render flexible chart component imported from chat_view
-    render_flexible_chart(df, unique_key_prefix=chart_key)
+    return df
