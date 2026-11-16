@@ -9,8 +9,8 @@ from config import init_metadata_store
 from bcrypt_auth import init_users
 from views.chat_view import render_chat_view
 from views.dashboard_view import render_dashboard_view
-from views.template_view import render_template_view
-from views.courses_list_view import render_courses_list
+from views.template_teacher_view import render_template_view
+from views.template_course_view import render_template_courses_view
 
 # Page Configuration
 st.set_page_config(
@@ -43,7 +43,7 @@ else:
     # Sidebar Navigation & Settings
     st.sidebar.title(f"👤 Logged in as: `{st.session_state.username}`")
     # openrouter_api_key = st.sidebar.text_input("OpenRouter API Key", type="password", placeholder="sk-or-...")
-    app_mode = st.sidebar.radio("Navigation", ["💬 NLP Query & Chat", "📊 Dashboards", "📋 Standard Reports", "📰 Desk Courses list"])
+    app_mode = st.sidebar.radio("Navigation", ["💬 NLP Query & Chat", "📊 Dashboards", "📋 Teacher Reports", "📰 Courses Reports"])
     
     st.sidebar.markdown("---")
     # Context-aware sidebar action: Clear chat history button when in chat mode
@@ -67,7 +67,7 @@ else:
         render_chat_view(st.session_state.username)
     elif app_mode == "📊 Dashboards":
         render_dashboard_view(st.session_state.username)
-    elif app_mode == "📰 Desk Courses list":
-        render_courses_list(st.session_state.username)
+    elif app_mode == "📰 Courses Reports":
+        render_template_courses_view()
     else:
         render_template_view()
