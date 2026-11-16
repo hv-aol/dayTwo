@@ -1,9 +1,11 @@
 import pandas as pd
 import streamlit as st
 from db_postgres_executor import execute_query_in_pg
-from config import TENANT_ID
 import datetime
 from views.chat_view import render_flexible_chart, show_sql
+import logging
+
+logger = logging.getLogger(__name__)
 
 def render_template_view():
     """Renders a library of independent pre-built report templates."""
@@ -16,7 +18,6 @@ def render_template_view():
     template_options = {
         "Teacher Performance": render_teacher_performance_template,
         "Teacher Details": render_teacher_details_template,
-        "Revenue & Billing Overview": render_revenue_template,
     }
 
     selected_template_name = st.selectbox(
@@ -123,17 +124,6 @@ def validate_dtls_inputs(teacher_code):
         return False
     return True
 
-
-# --- TEMPLATE 3 ----
-def render_all_courses_template():
-    desk_ids = st.session_state.desk_ids
-    if desk_ids is None:
-        st.error("User has no desk_ids!")
-        return
-    sql_query = f"""
-    SELECT """
-
-
 # --- INDEPENDENT TEMPLATE 4 ---
 def render_revenue_template():
     st.markdown("### 💰 Revenue & Billing Overview")
@@ -142,7 +132,11 @@ def render_revenue_template():
 
 
 # --- HELPER: SHARED EXECUTION RENDERER ---
-def run_template_execution(sql_query: str, template_title: str, chart_key: str):
+def run_template_execution(
+    sql_query: str,
+    template_title: str,
+    chart_key: str,
+    params: tuple | list | None = None):
     # store the result and query in session.
     data_key = f"data_{chart_key}"
     query_key = f"query_{chart_key}"
@@ -150,7 +144,7 @@ def run_template_execution(sql_query: str, template_title: str, chart_key: str):
     """Executes template queries independently and renders data/charts."""
     if st.button(f"🚀 Run '{template_title}'", type="primary", key=f"btn_{chart_key}"):
         try:
-            rs = execute_query_in_pg(sql_query)
+            rs = execute_query_in_pg(sql_query, params)
             df = pd.DataFrame(rs)
 
             if df.empty:

@@ -8,7 +8,7 @@ from db_utils import get_db_con_dict
 logger = logging.getLogger(__name__)
 db_dict = get_db_con_dict()
 
-def execute_query_in_pg(query):
+def execute_query_in_pg(query: str, params: tuple | list | None = None):
 	logger.info(f"executing query in postgres: {query}")
 	try:
 		with psycopg.connect(
@@ -39,7 +39,7 @@ def execute_query_in_pg(query):
 					setting_result = cur.fetchone()
 					logger.info(f"2. Current setting value: {setting_result}")
 					# execute query
-					cur.execute(query)
+					cur.execute(query, params)
 					rs = cur.fetchall()
 					return rs
 	except BaseException as e:
