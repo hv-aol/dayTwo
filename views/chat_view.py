@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def render_flexible_chart(df, unique_key_prefix):
     """Allows users to pick and choose fields and chart types dynamically."""
-    if df.empty or len(df.columns) < 1:
+    if df is None or df.empty or len(df.columns) < 1:
         return
         
     st.markdown("---")
