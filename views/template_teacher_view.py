@@ -73,6 +73,8 @@ def render_teacher_performance_template():
 
     chart_key = "perf_chart"
     df = run_template_execution(sql_query, "Teacher Performance Summary", chart_key)
+    if df is None:
+        return
     # Show the df on a graph
     # group the df by course type and sum the number of participants
     df1 = df.groupby('course_type')['participants_attended'].sum().reset_index()
