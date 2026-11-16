@@ -21,7 +21,7 @@ def read_courses(username: str, desk_ids: str):
 		AND cov.refresh_type = 'U'
 		AND cov.option_group_id = 14
 		AND cov.value = s.course_type_id
-		ORDER BY course_type_id desc"""
+		ORDER BY Course_Label """
 	df = execute_query_in_mysql(query, ids_int_list)
 	return df
 
@@ -32,6 +32,7 @@ def read_apex():
 		center_name 
 		FROM 
 		civicrm_aol_center cac
-		WHERE cac.is_apex = 1"""
+		WHERE cac.is_apex = 1
+		ORDER BY center_name """
 	df = execute_query_in_mysql(query)
 	return df
