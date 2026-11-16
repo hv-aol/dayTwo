@@ -15,9 +15,8 @@ def query_llm_with_history(query: str, tenant_id: int) -> str:
     payload = {"tenantId": tenant_id, "query": query}
 
     response = requests.post(PROD_LLM_BASE_URL, json=payload, headers=headers)
-    # print(f"Got response code: {response.status_code} and response = {response.json()}")
     llm_sql = response.json().get("sql")
-    logger.debug(f"Extracted value = {llm_sql}")
+    # logger.debug(f"Extracted value = {llm_sql}")
 
     # remove '''sql <> ''' thing if present.
     match = re.search(

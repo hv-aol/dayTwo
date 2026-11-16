@@ -21,7 +21,7 @@ def execute_with_retries(query, original_prompt, tenant_id):
 	query_to_use = query
 	while True:
 		# attempt to execute.
-		logger.info(f"Parameters: query_to_use {query_to_use}, retry_count = {retry_count}")
+		logger.info(f"Parameters: query_to_use {query_to_use[:200]}..., retry_count = {retry_count}")
 		retry_count += 1
 		try :
 			rs = execute_query(query_to_use)

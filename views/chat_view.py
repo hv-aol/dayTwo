@@ -89,8 +89,10 @@ def render_chat_view(username: str):
         with st.chat_message("assistant"):
             with st.spinner("LLM is writing and optimizing your query..."):
                 logger.info(f"messages: {st.session_state.messages}")
+                # TODO: Remove the messages and just use one message. Can cause perf/mem issue.
+                # We are not using history anyway
                 prompt_to_use = st.session_state.messages[-1]['content'] # using last prompt
-                logger.info(f"Using query: {prompt_to_use}")
+                logger.info(f"Using query by User {st.session_state.username} : {prompt_to_use}")
                 assistant_reply = query_llm_with_history(
                     query=prompt_to_use,
                     tenant_id=TENANT_ID

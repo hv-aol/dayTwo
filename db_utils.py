@@ -33,9 +33,22 @@ def get_db_con_dict():
         "database": os.getenv("DB_NAME")
     }
 
+def get_staging_db_con_dict():
+    crypto_key = load_system_key()
+    encrypted_pass = os.getenv("STAGING_DB_USER_PWD")
+    # decrypt it 
+    decrypted_pwd = crypto_utils.decrypt_pwd(encrypted_pass, crypto_key)
+    return {
+        "stg_host": os.getenv("STAGING_DB_SERVER_IP"),
+        "stg_port": os.getenv("STAGING_DB_SERVER_PORT"),
+        "stg_user": os.getenv("STAGING_DB_USER_NAME"),
+        "stg_password": decrypted_pwd,
+        "stg_database": os.getenv("STAGING_DB_NAME")
+    }
+
 
 def validate_query_gen_by_llm(query, target_db):
-    logger.debug(f"Target db = {target_db}, SQL to validate: {query}")
+    # logger.debug(f"Target db = {target_db}, SQL to validate: {query}")
     try:
         parsed_query = sqlglot.parse_one(query, dialect=target_db)
         logger.info(f"SQL validation passed!")
