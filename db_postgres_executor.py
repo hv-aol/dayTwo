@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 db_dict = get_db_con_dict()
 
 def execute_query_in_pg(query: str, params: tuple | list | None = None):
-	logger.info(f"executing query in postgres: {query}")
+	# logger.info(f"executing query in postgres: {query}")
 	try:
 		with psycopg.connect(
 			dbname        = db_dict.get("database"),
@@ -30,14 +30,13 @@ def execute_query_in_pg(query: str, params: tuple | list | None = None):
 			with conn:
 				# open cursor
 				with conn.cursor() as cur:
-					logger.info(f"1. executing query in postgres")
 					# check value of dept id in session
 					target_desk = st.session_state.dept_ids # read the dept id from session.
 					cur.execute("SELECT set_config('app.desk_ids', %s, false);", (target_desk,))
 					# Read back setting
 					cur.execute("SELECT current_setting('app.desk_ids', false) AS current_setting;")
 					setting_result = cur.fetchone()
-					logger.info(f"2. Current setting value: {setting_result}")
+					logger.info(f"Executing query with setting desk ids = {setting_result}")
 					# execute query
 					cur.execute(query, params)
 					rs = cur.fetchall()
