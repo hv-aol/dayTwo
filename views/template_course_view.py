@@ -78,9 +78,9 @@ def render_courses_template():
     seven_days_ago = today - datetime.timedelta(days=7)
     col21, col22 = st.columns(2)
     with col21:
-        st_date = st.date_input("start date:", key="perf_st", value=seven_days_ago)
+        st_date = st.date_input("Start date:", key="perf_st", value=seven_days_ago)
     with col22:
-        ed_date = st.date_input("end date:", key="perf_ed", value = today)
+        ed_date = st.date_input("End date:", key="perf_ed", value = today)
 
 
     # Validate them
@@ -114,9 +114,11 @@ def render_courses_template():
     # UNFORTUNATELY, course_type_ids are varchar in db. Convert the int id list to varchar
     picked_course_ids_str = [str(x) for x in picked_course_ids]
     chart_key="courses_chart"
-    df = run_template_execution(sql_query=sql_query,
+    df = run_template_execution(
+        sql_query=sql_query,
         template_title="Courses Details",
-        chart_key=chart_key,params=(picked_apex_names, picked_course_ids_str))
+        chart_key=chart_key,
+        params=(picked_apex_names, picked_course_ids_str))
     # Show the df on a graph
     render_flexible_chart(df, unique_key_prefix=chart_key)
 

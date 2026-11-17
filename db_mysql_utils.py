@@ -11,17 +11,17 @@ def read_courses(username: str, desk_ids: str):
 	print([type(x) for x in ids_int_list])
 	query = f"""
 	SELECT
-		cov.label as Course_Label,
 		cov.name as Course_Name,
 		s.course_type_id as Course_Id,
-		s.course_desk_id as Desk_Id
+		s.course_desk_id as Desk_Id,
+		cov.label as Course_Label
 		FROM civicrm_course_desk_courses s, civicrm_option_value cov 
 		WHERE s.course_desk_id in ({place_holders}) 
 		AND s.refresh_type = 'U'
 		AND cov.refresh_type = 'U'
 		AND cov.option_group_id = 14
 		AND cov.value = s.course_type_id
-		ORDER BY Course_Label """
+		ORDER BY Desk_Id, Course_Name """
 	df = execute_query_in_mysql(query, ids_int_list)
 	return df
 
