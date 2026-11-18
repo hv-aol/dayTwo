@@ -80,7 +80,7 @@ def render_courses_template():
     with col21:
         st_date = st.date_input("Start date:", key="perf_st", value=seven_days_ago)
     with col22:
-        ed_date = st.date_input("End date:", key="perf_ed", value = today)
+        ed_date = st.date_input("End date:", key="perf_ed")
 
 
     # Validate them
@@ -119,8 +119,13 @@ def render_courses_template():
         template_title="Courses Details",
         chart_key=chart_key,
         params=(picked_apex_names, picked_course_ids_str))
-    # Show the df on a graph
-    render_flexible_chart(df, unique_key_prefix=chart_key)
+
+    if df is not None:
+        df["total_participants"] = pd.to_numeric(df["total_participants"], errors="coerce")
+        # Group by city, sum the participants and courses with similar names
+        df1 = df.groupby(["course_name","event_city"], as_index=False)[["number_of_courses", "total_participants"]].sum().reset_index()
+        # Show the df on a graph
+        render_flexible_chart(df1, unique_key_prefix=chart_key)
 
 
 def validate_inputs(course_ids, apex_ids, st_date, ed_date):

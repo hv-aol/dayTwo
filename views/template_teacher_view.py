@@ -19,7 +19,7 @@ def render_template_view():
     template_options = {
         "Teacher Performance": render_teacher_performance_template,
         "Teacher Details": render_teacher_details_template,
-        "Full Time Teacher Performance": render_ft_teacher_performance_template,
+        "Full Time Teachers Performance": render_ft_teachers_performance_template,
     }
 
     selected_template_name = st.selectbox(
@@ -31,57 +31,116 @@ def render_template_view():
     template_func = template_options[selected_template_name]
     template_func()
 
-
-# --- INDEPENDENT TEMPLATE 1 ---
+# --- TEMPLATE 1 ---
 def render_teacher_performance_template():
     st.markdown("### 📚 Teacher Performance Summary")
     st.caption("Analyze Teacher Performance for a given period of time")
-
+    courses_df, sel_courses_ids = helper_fn_list_courses()
     today = datetime.date.today()
-    seven_days_ago = today - datetime.timedelta(days=7)
+    thirty_days_ago = today - datetime.timedelta(days=30)
     col1, col2, col3 = st.columns(3)
     with col1:
         teacher_code = st.text_input("Enter Teacher code:", key="perf_tc")
     with col2:
-        st_date = st.date_input("start date:", key="perf_st", value=seven_days_ago)
+        st_date = st.date_input("start date:", key="perf_st", value=thirty_days_ago)
     with col3:
         ed_date = st.date_input("end date:", key="perf_ed", value = today)
 
     # validate the inputs.
     if not validate_perf_inputs(st_date, ed_date, teacher_code):
         return
+    # if user has selected courses, add them to the filter, else just get all the courses
+    sql_query_0 = f"""
+    SELECT
+        a.course_name,
+        a.program_id,
+        b.course_name AS course_type,
+        a.event_start_date,
+        a.event_start_month,
+        a.event_state,
+        a.event_city,
+        a.event_district,
+        a.participants_attended
+    FROM
+        v_llm_secure_teacher_performance a
+    JOIN
+        llm_course_id_mapping b
+    ON
+        a.course_type = b.course_type_id
+    WHERE
+        a.teacher_code = '{teacher_code}'
+        AND a.event_start_month BETWEEN '{st_date}' AND '{ed_date}'
+        AND a.event_status != 'Cancelled'"""
 
-    sql_query = f"""
-		SELECT 
-		    a.course_name,
-            a.program_id,
-            b.course_name AS course_type,
-		    a.event_start_date,
-		    a.event_start_month,
-		    a.event_state,
-		    a.event_city,
-		    a.event_district,
-		    a.participants_attended 
-		FROM 
-		    v_llm_secure_teacher_performance a
-		JOIN 
-		    llm_course_id_mapping b
-		ON 
-		    a.course_type = b.course_type_id
+    sql_query_1 = f"""
+		SELECT
+        vstp.teacher_code,
+        vstp.teacher_name,
+        COUNT(e.global_event_id) AS number_of_courses,
+        SUM(vstp.participants_attended ) AS total_participants
+        FROM
+            v_llm_secure_teacher_performance vstp
+        JOIN
+            v_llm_secure_event_summary e
+        ON
+            vstp.global_event_id = e.global_event_id
 		WHERE 
-		    a.teacher_code = '{teacher_code}' 
-		    AND a.event_start_month BETWEEN '{st_date}' AND '{ed_date}'
-            AND a.event_status != 'Cancelled'"""
+		    vstp.teacher_code = '{teacher_code}'
+		    AND vstp.event_start_month BETWEEN '{st_date}' AND '{ed_date}'
+            AND vstp.event_status != 'Cancelled'
+            """
+    add_course_filter = len(courses_df) > len(sel_courses_ids)
+    params = None
 
-    chart_key = "perf_chart"
-    df = run_template_execution(sql_query, "Teacher Performance Summary", chart_key)
-    if df is None:
+    if add_course_filter:
+        sql_query_1 += " AND vstp.course_type = ANY(%s) "
+        sql_query_0 += " AND a.course_type = ANY(%s) "
+        picked_course_ids = courses_df.iloc[sel_courses_ids]["Course_Id"].tolist()
+        picked_courses_ids_str = helper_fn_int_str(picked_course_ids)
+        #logger.info(f"Selected course ids {picked_courses_ids_str}")
+        params = (picked_courses_ids_str,)
+
+    ## Add the group by clause
+    sql_query_1 += """
+    GROUP BY
+        vstp.teacher_code,
+        vstp.teacher_name
+    """
+    # Create a batch for both the queries, and execute.
+    k0 = "c_dtl"
+    k1 = "o_dtl"
+
+    args = [(sql_query_0, params, k0), (sql_query_1, params, k1)]
+    dfs_with_key = helper_sql_executor(args, "Performance Details", "perf_turbo_key")
+
+    for df, k in dfs_with_key:
+        st.session_state[k] = df
+
+    # Now, render what is present in session state.
+    if k0 not in st.session_state or k1 not in st.session_state:
         return
+    df0 = st.session_state[k0]
+    df1 = st.session_state[k1]
+
+    if df0 is None and df1 is None:
+        return
+    if df0.empty and df1.empty:
+        st.info("No data returned for the selected parameters.")
+        return
+
+    st.markdown("#### 📅 Overall Details")
+    st.dataframe(st.session_state[k1], use_container_width=True, hide_index=True)
+    st.markdown("#### 📅 Individual Course level Details")
+    st.dataframe(st.session_state[k0], use_container_width=True, hide_index=True)
     # Show the df on a graph
     # group the df by course type and sum the number of participants
-    df1 = df.groupby('course_type')['participants_attended'].sum().reset_index()
-    render_flexible_chart(df1, unique_key_prefix=chart_key)
+    #df1 = df.groupby('course_type')['total_participants'].sum().reset_index()
+    render_flexible_chart(df0, unique_key_prefix="fchart_key_{k1}")
 
+def helper_fn_int_str(int_ids: list):
+    # UNFORTUNATELY, course_type_ids are varchar in db. Convert the int id list to varchar
+    course_ids_str = [str(x) for x in int_ids]
+    return course_ids_str
 
 def validate_perf_inputs(st_date, ed_date, teacher_code):
     if teacher_code is None:
@@ -100,12 +159,12 @@ def validate_dates(st_date, ed_date):
         return False
     return True
 
-# --- INDEPENDENT TEMPLATE 2 ---
+# --- TEMPLATE 2 ---
 def render_teacher_details_template():
     st.markdown("### 📅 Teacher Details")
     st.caption("List personal details of a teacher")
-
-    teacher_code = st.text_input("Enter Teacher code:", key="dtls_tc")
+    k3 = "dtls_tc"
+    teacher_code = st.text_input("Enter Teacher code:", key=k3)
 
     # validate the inputs.
     if not validate_dtls_inputs(teacher_code):
@@ -125,12 +184,6 @@ def render_teacher_details_template():
         vt.teacher_apex
             from view_teacher vt where vt.teacher_code = '{teacher_code}'
     """
-    chart_key1 = "dtls_chart"
-    df = run_template_execution(
-        sql_query = sql_query,
-        template_title = "Personal Details",
-        chart_key = chart_key1)
-
     # Fetch elegible courses and their TTC/elegibility dates
     ttc_sql_query = f"""
     SELECT
@@ -151,13 +204,31 @@ ORDER BY
     a.ttc_year,
     b.teacher_code desc
     """
-    key = "ft_dtls_chart"
-    ttc_df = run_template_execution(
-        sql_query = ttc_sql_query,
-        template_title = "TTC Details",
-        chart_key = key)
-    # Show the df on a graph
-    render_flexible_chart(ttc_df, unique_key_prefix = key)
+
+    k0 = "p_dtl"
+    k1 = "t_dtl"
+
+    args = [(sql_query, None, k0), (ttc_sql_query, None, k1)]
+    dfs_with_key = helper_sql_executor(args, "Teacher Details", "dtls_turbo_key")
+    for df, k in dfs_with_key:
+        st.session_state[k] = df
+
+    # Now, render what is present in session state.
+    if k0 not in st.session_state or k1 not in st.session_state:
+        return
+    df0 = st.session_state[k0]
+    df1 = st.session_state[k1]
+
+    if df0 is None and df1 is None:
+        return
+    if df0.empty and df1.empty:
+        st.info("No data returned for the selected parameters.")
+        return
+    st.markdown("#### 📅 Personal Details")
+    st.dataframe(st.session_state[k0], use_container_width=True, hide_index=True)
+    st.markdown("#### 📅 TTC Details")
+    st.dataframe(st.session_state[k1], use_container_width=True, hide_index=True)
+
 
 def validate_dtls_inputs(teacher_code):
     if teacher_code is None:
@@ -165,10 +236,7 @@ def validate_dtls_inputs(teacher_code):
         return False
     return True
 
-# --- INDEPENDENT TEMPLATE 3 ---
-def render_ft_teacher_performance_template():
-    st.markdown("### 📚 Full Time Teacher Performance Summary")
-    st.caption("**Analyze Teacher Performance for a given period of time**")
+def helper_fn_list_courses():
     desk_ids = st.session_state.dept_ids
     courses_df = read_courses(username=st.session_state.username, desk_ids=desk_ids)
 
@@ -188,9 +256,16 @@ def render_ft_teacher_performance_template():
             height=280
             )
         sel_courses_ids = courses_df1.selection.rows
+        return courses_df, sel_courses_ids
 
+
+# --- INDEPENDENT TEMPLATE 3 ---
+def render_ft_teachers_performance_template():
+    st.markdown("### 📚 Full Time Teacher Performance Summary")
+    st.caption("**Analyze Teacher Performance for a given period of time**")
+    courses_df, sel_courses_ids = helper_fn_list_courses()
     today = datetime.date.today()
-    seven_days_ago = today - datetime.timedelta(days=7)
+    seven_days_ago = today - datetime.timedelta(days=30)
 
     col2, col3 = st.columns(2)
     with col2:
@@ -200,21 +275,18 @@ def render_ft_teacher_performance_template():
 
     # validate the inputs.
     picked_course_ids = courses_df.iloc[sel_courses_ids]["Course_Id"].tolist()
-    print(f"picked_course_ids: {picked_course_ids}")
-
+    
     if not validate_ft_perf_inputs(picked_course_ids, st_date, ed_date):
         return
     sql_query = f"""SELECT
         vstp.teacher_code,
         vstp.teacher_name,
-        vstp.course_name,
-        vstp.course_type,
         COUNT(e.global_event_id) AS number_of_courses,
         SUM(vstp.participants_attended ) AS total_participants
         FROM
-            v_llm_teacher_performance vstp
+            v_llm_secure_teacher_performance vstp
         JOIN
-            v_llm_event_summary e
+            v_llm_secure_event_summary e
         ON
             vstp.global_event_id = e.global_event_id
         WHERE
@@ -223,18 +295,15 @@ def render_ft_teacher_performance_template():
             AND e.event_status != 'Cancelled'
             and vstp.course_type = ANY(%s)
         GROUP BY
-            vstp.course_type,
-            vstp.teacher_code,
-            vstp.course_name,
             vstp.teacher_code,
             vstp.teacher_name
-        order by teacher_code
+        ORDER BY teacher_code
     """
     logger.info(f"type of selected course ds: {type(picked_course_ids)}")
     # UNFORTUNATELY, course_type_ids are varchar in db. Convert the int id list to varchar
     picked_course_ids_str = [str(x) for x in picked_course_ids]
     chart_key="ft_courses_chart"
-    logger.info(f"picked_course_ids_str: {picked_course_ids_str}")
+    # logger.info(f"picked_course_ids_str: {picked_course_ids_str}")
     df = run_template_execution(
         sql_query=sql_query,
         template_title="Full Time Teacher Performance Details",
@@ -277,7 +346,6 @@ def run_template_execution(
             st.session_state[data_key] = df            
             st.session_state[query_key] = sql_query
 
-
         except Exception as e:
             st.error(f"Error executing template query: {e}")
 
@@ -298,3 +366,17 @@ def run_template_execution(
 
     # Render flexible chart component imported from chat_view
     return df
+
+
+def helper_sql_executor(sql_with_params: list, template_title: str, but_key: str):
+    res_df = []
+    if st.button(f"🚀 Run '{template_title}'", type="primary", key = but_key):
+        try:
+            for (q, p, k) in sql_with_params:
+                #logger.info(f"Executing query: {q}, with params {p}")
+                rs = execute_query_in_pg(q, p)
+                df = pd.DataFrame(rs)
+                res_df.append((df, k))
+        except Exception as e:
+            logger.error(f"Error executing query {e}")
+    return res_df
