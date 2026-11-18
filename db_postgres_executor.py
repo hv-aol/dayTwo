@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 db_dict = get_db_con_dict()
 
 def execute_query_in_pg(query: str, params: tuple | list | None = None):
-	# logger.info(f"executing query in postgres: {query}")
+	logger.info(f"executing query in postgres: {query}")
 	try:
 		with psycopg.connect(
 			dbname        = db_dict.get("database"),

@@ -278,26 +278,53 @@ def render_ft_teachers_performance_template():
     
     if not validate_ft_perf_inputs(picked_course_ids, st_date, ed_date):
         return
-    sql_query = f"""SELECT
-        vstp.teacher_code,
-        vstp.teacher_name,
-        COUNT(e.global_event_id) AS number_of_courses,
-        SUM(vstp.participants_attended ) AS total_participants
-        FROM
-            v_llm_secure_teacher_performance vstp
-        JOIN
-            v_llm_secure_event_summary e
-        ON
-            vstp.global_event_id = e.global_event_id
-        WHERE
-            vstp.employment_type = 'FullTime'
-            AND e.event_start_date BETWEEN '{st_date}' AND '{ed_date}'
-            AND e.event_status != 'Cancelled'
-            and vstp.course_type = ANY(%s)
-        GROUP BY
-            vstp.teacher_code,
-            vstp.teacher_name
-        ORDER BY teacher_code
+    ft_query = f"""
+WITH full_time_teachers AS (
+    -- Guarantees strictly 1 row per global_teacher_id even if name/status changed over time
+    SELECT DISTINCT ON (global_teacher_id)
+        global_teacher_id,
+        teacher_code,
+        teacher_name,
+        teacher_status
+    FROM v_llm_secure_teacher_performance
+    WHERE employment_type = 'FullTime'
+    and teacher_status = 'Active'
+    ORDER BY global_teacher_id, event_start_date DESC NULLS LAST
+),
+eligible_teachers AS (
+    -- Collapses all matched course types into 1 row per teacher
+    SELECT DISTINCT
+        global_teacher_id
+    FROM public.teacher_course_type
+    WHERE COALESCE(is_deleted_prod, 0) = 0
+          AND course_type_id = ANY(%s)
+),
+recent_activity AS (
+    -- Sums all courses and pax across the passed course types into 1 row per teacher
+    SELECT
+        global_teacher_id,
+        COUNT(DISTINCT global_event_id) AS total_courses_taught,
+        COALESCE(SUM(participants_attended), 0) AS total_participants
+    FROM v_llm_secure_teacher_performance
+    WHERE employment_type = 'FullTime'
+      AND event_status = 'Not Cancelled'
+      AND event_start_date BETWEEN '{st_date}' AND '{ed_date}'
+      AND course_type = ANY(%s)
+    GROUP BY global_teacher_id
+)
+SELECT
+    t.global_teacher_id,
+    t.teacher_code,
+    t.teacher_name,
+    t.teacher_status,
+    COALESCE(a.total_courses_taught, 0) AS total_courses,
+    COALESCE(a.total_participants, 0) AS total_pax
+FROM full_time_teachers t
+INNER JOIN eligible_teachers e
+    ON t.global_teacher_id = e.global_teacher_id
+LEFT JOIN recent_activity a
+    ON t.global_teacher_id = a.global_teacher_id
+ORDER BY total_courses DESC, t.teacher_name ASC
     """
     logger.info(f"type of selected course ds: {type(picked_course_ids)}")
     # UNFORTUNATELY, course_type_ids are varchar in db. Convert the int id list to varchar
@@ -305,10 +332,10 @@ def render_ft_teachers_performance_template():
     chart_key="ft_courses_chart"
     # logger.info(f"picked_course_ids_str: {picked_course_ids_str}")
     df = run_template_execution(
-        sql_query=sql_query,
+        sql_query=ft_query,
         template_title="Full Time Teacher Performance Details",
         chart_key=chart_key,
-        params=(picked_course_ids_str,))
+        params=(picked_course_ids_str, picked_course_ids_str,))
     # Show the df on a graph
     render_flexible_chart(df, unique_key_prefix=chart_key)
 
