@@ -4,7 +4,7 @@ import datetime
 import logging
 from views.template_teacher_view import run_template_execution, validate_dates
 from db_mysql_utils import read_courses, read_apex
-
+from views.chat_view import render_flexible_chart
 # This template is for Courses related view, for example,
 # one template is for viewing all the courses in a given list of apex bodies
 
@@ -78,9 +78,9 @@ def render_courses_template():
     seven_days_ago = today - datetime.timedelta(days=7)
     col21, col22 = st.columns(2)
     with col21:
-        st_date = st.date_input("start date:", key="perf_st", value=seven_days_ago)
+        st_date = st.date_input("Start date:", key="perf_st", value=seven_days_ago)
     with col22:
-        ed_date = st.date_input("end date:", key="perf_ed", value = today)
+        ed_date = st.date_input("End date:", key="perf_ed")
 
 
     # Validate them
@@ -113,9 +113,19 @@ def render_courses_template():
 
     # UNFORTUNATELY, course_type_ids are varchar in db. Convert the int id list to varchar
     picked_course_ids_str = [str(x) for x in picked_course_ids]
-    run_template_execution(sql_query=sql_query, 
-        template_title="Courses Details", 
-        chart_key="courses_chart",params=(picked_apex_names, picked_course_ids_str))
+    chart_key="courses_chart"
+    df = run_template_execution(
+        sql_query=sql_query,
+        template_title="Courses Details",
+        chart_key=chart_key,
+        params=(picked_apex_names, picked_course_ids_str))
+
+    if df is not None:
+        df["total_participants"] = pd.to_numeric(df["total_participants"], errors="coerce")
+        # Group by city, sum the participants and courses with similar names
+        df1 = df.groupby(["course_name","event_city"], as_index=False)[["number_of_courses", "total_participants"]].sum().reset_index()
+        # Show the df on a graph
+        render_flexible_chart(df1, unique_key_prefix=chart_key)
 
 
 def validate_inputs(course_ids, apex_ids, st_date, ed_date):
